@@ -42,9 +42,9 @@ jobs:
         working-directory: src/product-catalog
         run: go test ./... -v
 
-
+#
 # -------------------------------------------------------
-# JOB: CODE QUALITY
+#JOB: CODE QUALITY
 # -------------------------------------------------------
   code-quality:
     runs-on: ubuntu-latest
