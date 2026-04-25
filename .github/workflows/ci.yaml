@@ -107,17 +107,17 @@ jobs:
     needs: docker
 
     steps:
-      - name: Scan Docker Image
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          scan-type: image
-          image-ref: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-          format: table
-          vuln-type: os,library
-          severity: CRITICAL,HIGH
+          image-ref: ' ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}'
+          format: 'table'
+          exit-code: '1'
           ignore-unfixed: true
-          exit-code: "1"   # 🔥 fail pipeline on critical/high
-
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
 # -------------------------------------------------------
 # GITOPS DEPLOY
 # -------------------------------------------------------
