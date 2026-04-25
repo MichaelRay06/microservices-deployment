@@ -21,7 +21,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: 'stable'
+          go-version: '1.22'
           cache: true
 
       - name: Install golangci-lint
@@ -44,7 +44,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: 'stable'
+          go-version: '1.22'
           cache: true
 
       - name: Build application
@@ -74,7 +74,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: 'stable'
+          go-version: '1.22'
           cache: true
 
       - name: Run tests
@@ -83,7 +83,7 @@ jobs:
 
   docker:
     runs-on: ubuntu-latest
-    needs: test   # important: ensure tests pass before image build
+    needs: test
 
     steps:
       - name: Checkout code
