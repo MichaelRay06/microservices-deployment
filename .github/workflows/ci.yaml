@@ -1,34 +1,44 @@
 name: product-catalog-ci
 
 on:
+  push:
+    branches: [ "main" ]
   pull_request:
-    branches:
-      - main
+    branches: [ "main" ]
 
 jobs:
-
-  build:
+  build-test:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4  # Node20 compatible
+        uses: actions/checkout@v4
 
-      - name: Setup Go 1.22
-        uses: actions/setup-go@v4   # Node20 compatible
+      - name: Set up Go (latest stable)
+        uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: 'stable'
 
-      - name: Build service
+      - name: Verify Go version
+        run: go version
+
+      - name: Change to product-catalog directory
+        working-directory: src/product-catalog
+        run: pwd
+
+      - name: Download dependencies
         working-directory: src/product-catalog
         run: |
+          go mod tidy
           go mod download
-          go build -o product-catalog-service main.go
 
-      - name: unit tests
-        run: |
-          cd src/product-catalog
-          go test ./...
+      - name: Build application
+        working-directory: src/product-catalog
+        run: go build -v -o app main.go
+
+      - name: Run unit tests
+        working-directory: src/product-catalog
+        run: go test ./... -v
 
 
   code-quality:
@@ -38,10 +48,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Go 1.22
+      - name: Setup Go (latest stable)
         uses: actions/setup-go@v4
         with:
-          go-version: '1.22'
+           go-version: 'stable'
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6   # Node20 compatible
