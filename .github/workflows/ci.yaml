@@ -2,9 +2,13 @@ name: product-catalog-ci
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
+
+env:
+  # Force testing against Node.js 24 runtime now
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build:
@@ -18,13 +22,10 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: 'stable'
+          cache: true
 
       - name: Verify Go version
         run: go version
-
-      - name: Change to product-catalog directory
-        working-directory: src/product-catalog
-        run: pwd
 
       - name: Download dependencies
         working-directory: src/product-catalog
