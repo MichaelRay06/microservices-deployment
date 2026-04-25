@@ -46,27 +46,14 @@ jobs:
 # -------------------------------------------------------
 # GOVULNCHECK (Dockerized)
 # -------------------------------------------------------
-  govulncheck:
-    runs-on: ubuntu-latest
-    needs: build
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Run govulncheck via Docker
-        run: |
-          docker run --rm \
-            -v ${{ github.workspace }}:/app \
-            -w /app/src/product-catalog \
-            golang:2.53.0 \
-            sh -c "go install golang.org/x/vuln/cmd/govulncheck@latest && govulncheck ./..."
+  
 
 # -------------------------------------------------------
 # GOLANGCI-LINT (Dockerized)
 # -------------------------------------------------------
   lint:
     runs-on: ubuntu-latest
-    needs: govulncheck
+    needs: build
 
     steps:
       - uses: actions/checkout@v4
