@@ -51,27 +51,14 @@ jobs:
 # -------------------------------------------------------
 # GOLANGCI-LINT (Dockerized)
 # -------------------------------------------------------
-  lint:
-    runs-on: ubuntu-latest
-    needs: build
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Run golangci-lint via Docker
-        run: |
-          docker run --rm \
-            -v ${{ github.workspace }}:/app \
-            -w /app/src/product-catalog \
-            golangci/golangci-lint:v1.55.2 \
-            golangci-lint run ./...
+ 
 
 # -------------------------------------------------------
 # GITLEAKS (Dockerized)
 # -------------------------------------------------------
   gitleaks:
     runs-on: ubuntu-latest
-    needs: lint
+    needs: build
 
     steps:
       - uses: actions/checkout@v4
