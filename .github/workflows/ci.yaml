@@ -3,8 +3,7 @@ name: product-catalog-ci
 on:
   push:
     branches: ["main"]
-  pull_request:
-    branches: ["main"]
+  
 
 env:
   # Force testing against Node.js 24 runtime now
@@ -12,9 +11,9 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+     runs-on: ubuntu-latest
 
-    steps:
+     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
