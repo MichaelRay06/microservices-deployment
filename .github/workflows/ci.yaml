@@ -3,8 +3,11 @@ name: product-catalog-ci
 on:
   push:
     branches: ["main"]
-  pull_request:
-    branches: ["main"]
+    paths-ignore:
+      - "kubernetes/**"
+  #pull_request:
+    #branches: ["main"]
+
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
