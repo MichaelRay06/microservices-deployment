@@ -3,83 +3,103 @@ name: product-catalog-ci
 on:
   push:
     branches: ["main"]
-  
+  pull_request:
+    branches: ["main"]
 
 env:
-  # Force testing against Node.js 24 runtime now
+  # Proactively validate against Node.js 24 runtime
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  build:
-     runs-on: ubuntu-latest
-
-     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Go (latest stable)
-        uses: actions/setup-go@v5
-        with:
-          go-version: 'stable'
-          cache: true
-
-      - name: Verify Go version
-        run: go version
-
-      - name: Download dependencies
-        working-directory: src/product-catalog
-        run: |
-          go mod tidy
-          go mod download
-
-      - name: Build application
-        working-directory: src/product-catalog
-        run: go build -v -o app main.go
-
-      - name: Run unit tests
-        working-directory: src/product-catalog
-        run: go test ./... -v
-
-
-  code-quality:
+  lint:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Go (latest stable)
-        uses: actions/setup-go@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
-           go-version: 'stable'
+          go-version: 'stable'
+          cache: true
 
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6   # Node20 compatible
+      - name: Install golangci-lint
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s latest
+          sudo mv ./bin/golangci-lint /usr/local/bin/
+
+      - name: Run linter
+        working-directory: src/product-catalog
+        run: golangci-lint run ./...
+
+  build:
+    runs-on: ubuntu-latest
+    needs: lint
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
-          version: v1.55.2
-          run: golangci-lint run
-          working-directory: src/product-catalog
+          go-version: 'stable'
+          cache: true
 
+      - name: Build application
+        working-directory: src/product-catalog
+        run: |
+          go mod tidy
+          go build -v -o app main.go
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: product-catalog-binary
+          path: src/product-catalog/app
+
+  test:
+    runs-on: ubuntu-latest
+    needs: build
+
+    # Optional escape hatch (enable ONLY if Node 24 breaks something)
+    # env:
+    #   ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+          cache: true
+
+      - name: Run tests
+        working-directory: src/product-catalog
+        run: go test ./... -v
 
   docker:
     runs-on: ubuntu-latest
-    needs: build
+    needs: test   # important: ensure tests pass before image build
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3  # Node20 compatible
+        uses: docker/setup-buildx-action@v3
 
       - name: Login to Docker Hub
-        uses: docker/login-action@v3         # Node20 compatible
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
       - name: Build & Push Image
-        uses: docker/build-push-action@v6     # Node20 compatible
+        uses: docker/build-push-action@v6
         with:
           context: src/product-catalog
           file: src/product-catalog/Dockerfile
@@ -87,7 +107,6 @@ jobs:
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/product-catalog:${{ github.run_id }}
             ${{ secrets.DOCKER_USERNAME }}/product-catalog:latest
-
 
   updatek8s:
     runs-on: ubuntu-latest
@@ -110,7 +129,5 @@ jobs:
           git config --global user.name "MichaelRay06"
 
           git add kubernetes/productcatalog/deploy.yaml
-          git commit -m "[CI]: Update product catalog image tag to ${{ github.run_id }}"
+          git commit -m "[CI]: Update product catalog image tag to ${{ github.run_id }}" || echo "No changes to commit"
           git push origin HEAD:main
-
-
