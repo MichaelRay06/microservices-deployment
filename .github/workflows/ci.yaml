@@ -58,7 +58,7 @@ jobs:
           docker run --rm \
             -v ${{ github.workspace }}:/app \
             -w /app/src/product-catalog \
-            golang:1.22 \
+            golang:2.53.0 \
             sh -c "go install golang.org/x/vuln/cmd/govulncheck@latest && govulncheck ./..."
 
 # -------------------------------------------------------
