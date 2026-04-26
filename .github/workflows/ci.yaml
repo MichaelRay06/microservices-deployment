@@ -154,8 +154,8 @@ jobs:
 
       - name: Commit & push
         run: |
-          git config --global user.email "michaelo.ray06@gmail.com"
-          git config --global user.name "MichaelRay06"
+          git config --global user.email ${{ secrets.DOCKER_USER_EMAIL }}
+          git config --global user.name ${{ secrets.DOCKER_USERNAME }}
 
           git add kubernetes/productcatalog/deploy.yaml
           git diff --quiet || git commit -m "[GitOps] product-catalog -> ${{ env.IMAGE_TAG }}"
