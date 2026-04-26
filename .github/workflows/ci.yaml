@@ -38,6 +38,9 @@ jobs:
 
   build_ad:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/ad
 
     steps:
       - uses: actions/checkout@v4
