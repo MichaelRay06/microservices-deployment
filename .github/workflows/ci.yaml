@@ -45,12 +45,12 @@ jobs:
         run: go test ./... -v
 
 # -------------------------------------------------------
-# GOLANGCI-LINT (Code Quality)
+# GOLANGCI-LINT (parallel, non-blocking)
 # -------------------------------------------------------
   golangci_lint:
     runs-on: ubuntu-latest
     needs: build
-    continue-on-error: true   # 👈 allows pipeline to proceed
+    continue-on-error: true
 
     steps:
       - uses: actions/checkout@v4
@@ -68,12 +68,12 @@ jobs:
           args: --timeout=5m
 
 # -------------------------------------------------------
-# GITLEAKS (Secrets Scan)
+# GITLEAKS (parallel, non-blocking)
 # -------------------------------------------------------
-gitleaks:
+  gitleaks:
     runs-on: ubuntu-latest
     needs: build
-    continue-on-error: true   # 👈 allows pipeline to proceed
+    continue-on-error: true
 
     steps:
       - uses: actions/checkout@v4
@@ -83,14 +83,13 @@ gitleaks:
         with:
           source: .
           args: detect --source src/product-catalog --verbose --redact
-#
-#
+
 # -------------------------------------------------------
-# TRIVY FS SCAN
+# TRIVY FS SCAN (waits for both checks, but not blocked)
 # -------------------------------------------------------
-trivy_fs:
+  trivy_fs:
     runs-on: ubuntu-latest
-    needs: [build, gitleaks, golangci_lint]
+    needs: [golangci_lint, gitleaks]
 
     steps:
       - uses: actions/checkout@v4
