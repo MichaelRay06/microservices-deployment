@@ -49,7 +49,7 @@ jobs:
 # -------------------------------------------------------
   golangci_lint:
     runs-on: ubuntu-latest
-    needs: build
+    
 
     steps:
       - uses: actions/checkout@v4
@@ -71,7 +71,7 @@ jobs:
 # -------------------------------------------------------
   gitleaks:
     runs-on: ubuntu-latest
-    needs: build
+   
 
     steps:
       - uses: actions/checkout@v4
@@ -81,7 +81,9 @@ jobs:
         with:
           source: .
           args: detect --source src/product-catalog --verbose --redact
-
+#
+#
+#
 # -------------------------------------------------------
 # TRIVY FS SCAN
 # -------------------------------------------------------
