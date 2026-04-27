@@ -37,23 +37,35 @@ jobs:
       - run: go test ./... -v
 
   build_ad:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: src/ad
+  runs-on: ubuntu-latest
 
-    steps:
-      - uses: actions/checkout@v4
+  defaults:
+    run:
+      working-directory: src/ad
 
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 21
+  steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
 
-      - run: chmod +x ./gradlew
-      - run: ./gradlew dependencies
-      - run: ./gradlew test
-      - run: ./gradlew build
+    - name: Set up JDK 21
+      uses: actions/setup-java@v5
+      with:
+        distribution: temurin
+        java-version: 21
+        cache: gradle
+
+    - name: Make Gradle executable
+      run: chmod +x ./gradlew
+
+    # Optional: Pre-fetch dependencies (similar to Docker layer caching)
+    - name: Download dependencies
+      run: ./gradlew downloadRepos || true
+
+    - name: Build project
+      run: ./gradlew build --no-daemon --stacktrace
+
+    - name: Run unit tests
+      run: ./gradlew test --no-daemon --info
 
 # =======================================================
 # SECURITY (PARALLEL, NON-BLOCKING WHERE APPROPRIATE)
