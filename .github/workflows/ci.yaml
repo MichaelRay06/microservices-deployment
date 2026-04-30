@@ -56,22 +56,7 @@ jobs:
       - run: chmod +x ./gradlew
       - run: ./gradlew build --no-daemon --stacktrace
 
-# =======================================================
-# DEPENDENCY GRAPH
-# =======================================================
 
-  dependency-submission:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: '21'
-      - uses: gradle/actions/dependency-submission@v4
 
 # =======================================================
 # SECURITY (ALWAYS RUN)
