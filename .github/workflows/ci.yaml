@@ -131,8 +131,8 @@ jobs:
 
       - uses: docker/build-push-action@v6
         with:
-          context: .
-          file: Dockerfile
+          context: src/ad
+          file: src/ad/Dockerfile
           push: true
           tags: |
             ${{ env.IMAGE_NAME }}/ad:${{ env.IMAGE_TAG }}
