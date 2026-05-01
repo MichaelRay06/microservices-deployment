@@ -242,3 +242,7 @@ jobs:
           tags: |
             ${{ env.IMAGE_NAME }}/recommendation:${{ env.IMAGE_TAG }}
             ${{ env.IMAGE_NAME }}/recommendation:latest
+
+
+
+
