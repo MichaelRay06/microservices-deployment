@@ -60,11 +60,11 @@ jobs:
 
       - name: Make Gradle Wrapper Executable
         run: chmod +x ./gradlew
-        working-directory: ${{ env.GRADLEPATH }}
+        working-directory: src/ad
 
       - name: Build and Test with Gradle Wrapper
         run: ./gradlew build
-        working-directory: ${{ env.GRADLEPATH }}
+        working-directory: src/ad
 
   dependency-submission:
     runs-on: ubuntu-latest
