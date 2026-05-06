@@ -288,17 +288,19 @@ jobs:
     if: success()
 
     steps:
-      - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.CICD_GITHUB_TOKEN }}
+        - name: checkout code
+          uses: actions/checkout@v4
+          with:
+            token: ${{ secrets.GITHUB_TOKEN }}
 
-      - run: |
-          sed -i "s|image: .*|image: ${{ env.IMAGE_NAME }}/recommendation:${{ env.IMAGE_TAG }}|" \
-          kubernetes/recommendation/deploy.yaml
-
-      - run: |
-          git config --global user.email ${{ secrets.DOCKER_USER_EMAIL }}
-          git config --global user.name ${{ secrets.DOCKER_USERNAME }}
-          git add kubernetes/recommendation/deploy.yaml
-          git diff --quiet || git commit -m "[GitOps] recommendation -> ${{ env.IMAGE_TAG }}"
-          git push origin HEAD:main  
+        - name: Update tag in kubernetes deployment manifest
+          run: | 
+               sed -i 's|^image:.*|image: ${{ env.IMAGE_NAME }}/recommendation:${{ env.IMAGE_TAG }}|' kubernetes/recommendation/deploy.yaml
+        
+        - name: Commit and push changes
+          run: |
+            git config --global user.email ${{ secrets.DOCKER_USER_EMAIL }}
+            git config --global user.name ${{ secrets.DOCKER_USERNAME }}
+            git add kubernetes/recommendation/deploy.yaml
+            git commit -m "[CI]: Update recommendation image tag"
+            git push origin HEAD:main -f
