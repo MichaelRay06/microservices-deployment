@@ -27,21 +27,30 @@ jobs:
         working-directory: src/product-catalog
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-go@v5
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
           go-version: "1.22"
           cache: true
 
-      - run: go mod download
-      - run: go mod tidy
-      - run: go build -v -o product-catalog .
-      - run: go test ./... -v
+      - name: Download Dependencies
+        run: go mod download
 
-  # ==============================================
-  # GRADLE BUILD AND TEST
-  # ==============================================
+      - name: Tidy Modules
+        run: go mod tidy
+
+      - name: Build Application
+        run: go build -v -o product-catalog .
+
+      - name: Run Tests
+        run: go test ./... -v
+
+  # =======================================================
+  # GRADLE BUILD + TEST
+  # =======================================================
 
   build_gradle:
     runs-on: ubuntu-latest
@@ -50,7 +59,8 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -59,12 +69,16 @@ jobs:
           distribution: "temurin"
 
       - name: Make Gradle Wrapper Executable
+        working-directory: src/ad
         run: chmod +x ./gradlew
-        working-directory: src/ad
 
-      - name: Build with Gradle
-        run: ./gradlew build --warning-mode all
+      - name: Build and Test with Gradle
         working-directory: src/ad
+        run: ./gradlew build --warning-mode all
+
+  # =======================================================
+  # DEPENDENCY SUBMISSION
+  # =======================================================
 
   dependency-submission:
     runs-on: ubuntu-latest
@@ -73,7 +87,8 @@ jobs:
       contents: write
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -82,11 +97,11 @@ jobs:
           distribution: "temurin"
 
       - name: Make Gradle Wrapper Executable
-        run: chmod +x ./gradlew
         working-directory: src/ad
+        run: chmod +x ./gradlew
 
   # =======================================================
-  # SECURITY
+  # SECURITY SCANNING
   # =======================================================
 
   gitleaks:
@@ -96,9 +111,11 @@ jobs:
     continue-on-error: true
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-      - uses: gitleaks/gitleaks-action@v2
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
         with:
           args: detect --source . --verbose --redact
 
@@ -108,9 +125,11 @@ jobs:
     if: always()
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-      - uses: aquasecurity/trivy-action@v0.36.0
+      - name: Run Trivy Filesystem Scan
+        uses: aquasecurity/trivy-action@0.36.0
         with:
           scan-type: fs
           scan-ref: .
@@ -125,14 +144,17 @@ jobs:
     continue-on-error: true
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-go@v5
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
           go-version: "1.22"
           cache: true
 
-      - uses: golangci/golangci-lint-action@v6
+      - name: Run GolangCI-Lint
+        uses: golangci/golangci-lint-action@v6
         with:
           args: --timeout=5m
           working-directory: src/product-catalog
@@ -147,7 +169,8 @@ jobs:
     if: always()
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -155,8 +178,11 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # BUILD IMAGE LOCALLY (NO PUSH YET)
-      - name: Build Product Catalog Image
+      # ---------------------------------------------------
+      # BUILD IMAGE LOCALLY
+      # ---------------------------------------------------
+
+      - name: Build Product Catalog Docker Image
         uses: docker/build-push-action@v6
         with:
           context: src/product-catalog
@@ -167,25 +193,35 @@ jobs:
             ${{ env.IMAGE_NAME }}/product-catalog:${{ env.IMAGE_TAG }}
             ${{ env.IMAGE_NAME }}/product-catalog:latest
 
-      # SCAN IMAGE BEFORE PUSHING
-      - name: Scan Docker Image with Trivy
-        uses: aquasecurity/trivy-action@0.28.0
-        with:
-          image-ref: ${{ env.IMAGE_NAME }}/product-catalog:${{ env.IMAGE_TAG }}
-          format: table
-          exit-code: 1
-          ignore-unfixed: true
-          vuln-type: os,library
-          severity: CRITICAL,HIGH
+      # ---------------------------------------------------
+      # SCAN IMAGE WITH TRIVY DOCKER IMAGE
+      # ---------------------------------------------------
 
-      # LOGIN ONLY AFTER SUCCESSFUL SCAN
+      - name: Scan Product Catalog Image with Trivy
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v $HOME/.cache:/root/.cache/ \
+            aquasec/trivy:latest image \
+            --severity CRITICAL,HIGH \
+            --ignore-unfixed \
+            --exit-code 1 \
+            ${{ env.IMAGE_NAME }}/product-catalog:${{ env.IMAGE_TAG }}
+
+      # ---------------------------------------------------
+      # LOGIN TO DOCKER HUB
+      # ---------------------------------------------------
+
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
-      # PUSH IMAGE AFTER SCAN PASSES
+      # ---------------------------------------------------
+      # PUSH IMAGE
+      # ---------------------------------------------------
+
       - name: Push Product Catalog Image
         run: |
           docker push ${{ env.IMAGE_NAME }}/product-catalog:${{ env.IMAGE_TAG }}
@@ -197,7 +233,8 @@ jobs:
     if: always()
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -205,8 +242,11 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # BUILD IMAGE LOCALLY (NO PUSH YET)
-      - name: Build Ad Service Image
+      # ---------------------------------------------------
+      # BUILD IMAGE LOCALLY
+      # ---------------------------------------------------
+
+      - name: Build Ad Docker Image
         uses: docker/build-push-action@v6
         with:
           context: src/ad
@@ -217,32 +257,42 @@ jobs:
             ${{ env.IMAGE_NAME }}/ad:${{ env.IMAGE_TAG }}
             ${{ env.IMAGE_NAME }}/ad:latest
 
-      # SCAN IMAGE BEFORE PUSHING
-      - name: Scan Ad Docker Image with Trivy
-        uses: aquasecurity/trivy-action@0.28.0
-        with:
-          image-ref: ${{ env.IMAGE_NAME }}/ad:${{ env.IMAGE_TAG }}
-          format: table
-          exit-code: 1
-          ignore-unfixed: true
-          vuln-type: os,library
-          severity: CRITICAL,HIGH
+      # ---------------------------------------------------
+      # SCAN IMAGE WITH TRIVY DOCKER IMAGE
+      # ---------------------------------------------------
 
-      # LOGIN ONLY AFTER SUCCESSFUL SCAN
+      - name: Scan Ad Image with Trivy
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v $HOME/.cache:/root/.cache/ \
+            aquasec/trivy:latest image \
+            --severity CRITICAL,HIGH \
+            --ignore-unfixed \
+            --exit-code 1 \
+            ${{ env.IMAGE_NAME }}/ad:${{ env.IMAGE_TAG }}
+
+      # ---------------------------------------------------
+      # LOGIN TO DOCKER HUB
+      # ---------------------------------------------------
+
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
-      # PUSH IMAGE AFTER SCAN PASSES
+      # ---------------------------------------------------
+      # PUSH IMAGE
+      # ---------------------------------------------------
+
       - name: Push Ad Image
         run: |
           docker push ${{ env.IMAGE_NAME }}/ad:${{ env.IMAGE_TAG }}
           docker push ${{ env.IMAGE_NAME }}/ad:latest
 
   # =======================================================
-  # GITOPS DEPLOY
+  # GITOPS DEPLOYMENT
   # =======================================================
 
   update_product_catalog:
@@ -251,21 +301,26 @@ jobs:
     if: success()
 
     steps:
-      - name: Checkout code
+      - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.CICD_GITHUB_TOKEN }}
 
-      - name: Update tag in kubernetes deployment manifest
+      - name: Update Product Catalog Deployment Manifest
         run: |
-          sed -i "s|image: .*|image: ${{ secrets.DOCKER_USERNAME }}/product-catalog:${{ github.sha }}|" kubernetes/productcatalog/deploy.yaml
+          sed -i "s|image: .*|image: ${{ secrets.DOCKER_USERNAME }}/product-catalog:${{ github.sha }}|" \
+          kubernetes/productcatalog/deploy.yaml
 
-      - name: Commit and push changes
+      - name: Commit and Push Changes
         run: |
           git config --global user.email "${{ secrets.DOCKER_USER_EMAIL }}"
           git config --global user.name "${{ secrets.DOCKER_USERNAME }}"
+
           git add kubernetes/productcatalog/deploy.yaml
-          git commit -m "[CI]: Update product catalog image tag" || echo "No changes to commit"
+
+          git commit -m "[CI]: Update product catalog image tag" || \
+          echo "No changes to commit"
+
           git push origin HEAD:main
 
   update_ad:
@@ -274,19 +329,24 @@ jobs:
     if: success()
 
     steps:
-      - name: Checkout code
+      - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.CICD_GITHUB_TOKEN }}
 
-      - name: Update tag in kubernetes deployment manifest
+      - name: Update Ad Deployment Manifest
         run: |
-          sed -i "s|image: .*|image: ${{ secrets.DOCKER_USERNAME }}/ad:${{ github.sha }}|" kubernetes/ad/deploy.yaml
+          sed -i "s|image: .*|image: ${{ secrets.DOCKER_USERNAME }}/ad:${{ github.sha }}|" \
+          kubernetes/ad/deploy.yaml
 
-      - name: Commit and push changes
+      - name: Commit and Push Changes
         run: |
           git config --global user.email "${{ secrets.DOCKER_USER_EMAIL }}"
           git config --global user.name "${{ secrets.DOCKER_USERNAME }}"
+
           git add kubernetes/ad/deploy.yaml
-          git commit -m "[CI]: Update ad image tag" || echo "No changes to commit"
+
+          git commit -m "[CI]: Update ad image tag" || \
+          echo "No changes to commit"
+
           git push origin HEAD:main
