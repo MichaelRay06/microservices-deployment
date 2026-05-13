@@ -2,16 +2,16 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 6.32.1"
+      version = "~> 6.44.0"
     }
   }
 
   backend "s3" {
-    bucket         = "demo-terraformxxx2-eks-state-s3-bucket"
-    key            = "terraform.tfstate"
-    region         = "eu-west-2"
+    bucket       = "terraform-eks-telement-miroservices-state-s3-bucket"
+    key          = "terraform.tfstate"
+    region       = "eu-west-2"
     use_lockfile = true
-    encrypt        = true
+    encrypt      = true
   }
 }
 

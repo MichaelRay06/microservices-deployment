@@ -172,7 +172,7 @@ jobs:
           push: true
           tags: |
             ${{ env.IMAGE_NAME }}/product-catalog:${{ env.IMAGE_TAG }}
-            ${{ env.IMAGE_NAME }}/product-catalog:latest
+            #${{ env.IMAGE_NAME }}/product-catalog:latest
 
       - name: Scan Docker Image with Trivy
         # --rm means remove the Trivy image when scanning is completed
@@ -210,7 +210,7 @@ jobs:
           push: true
           tags: |
             ${{ env.IMAGE_NAME }}/ad:${{ env.IMAGE_TAG }}
-            ${{ env.IMAGE_NAME }}/ad:latest
+            #${{ env.IMAGE_NAME }}/ad:latest
 
 
   # =======================================================
