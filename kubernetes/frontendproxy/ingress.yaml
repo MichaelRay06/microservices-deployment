@@ -8,7 +8,7 @@ metadata:
 spec:
   ingressClassName: alb
   rules:
-    - host: www.microservice.thetechsolutionfirm.co.uk
+    - host: www.telmenterymicroservice.thetechsolutionfirm.co.uk
       http:
         paths:
           - path: "/"
