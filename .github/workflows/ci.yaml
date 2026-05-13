@@ -143,23 +143,21 @@ jobs:
     needs: docker
 
     steps:
-      - uses: actions/checkout@v4
+      - name: checkout code
+        uses: actions/checkout@v4
         with:
           token: ${{ secrets.CICD_GITHUB_TOKEN }}
 
-      - name: Update Kubernetes deployment
+      - name: Update tag in kubernetes deployment manifest
         run: |
-          sed -i "s|image: .*|image: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}|" \
-            kubernetes/productcatalog/deploy.yaml
+          sed -i "s|image: .*|image: ${{ secrets.DOCKER_USERNAME }}/product-catalog:${{ github.run_id }}|" kubernetes/productcatalog/deploy.yaml
 
-      - name: Commit & push
+      - name: Commit and push changes
         run: |
           git config --global user.email ${{ secrets.DOCKER_USER_EMAIL }}
           git config --global user.name ${{ secrets.DOCKER_USERNAME }}
-
           git add kubernetes/productcatalog/deploy.yaml
-          git diff --quiet || git commit -m "[GitOps] product-catalog -> ${{ env.IMAGE_TAG }}"
-          git push origin HEAD:main
-
+          git commit -m "[CI]: Update product catalog image tag"
+          git push origin HEAD:main -f
 
           
