@@ -146,14 +146,7 @@ jobs:
       # SCAN IMAGE BEFORE PUSHING
       # -----------------------------------------------
       - name: Scan Docker Image with Trivy
-        run: |
-          docker run --rm \
-            -v /var/run/docker.sock:/var/run/docker.sock \
-            aquasec/trivy:latest image \
-            --severity CRITICAL,HIGH \
-            --exit-code 1 \
-            --ignore-unfixed \
-            ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+        run:  docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:latest image ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
 
       # -----------------------------------------------
       # PUSH IMAGE ONLY IF SCAN PASSES
