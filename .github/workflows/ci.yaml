@@ -103,7 +103,7 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      - name: Run Trivy FS Scan
+      - name: Run Trivy Filesystem Scan
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
@@ -113,7 +113,7 @@ jobs:
           ignore-unfixed: true
 
 # -------------------------------------------------------
-# DOCKER BUILD & PUSH
+# DOCKER BUILD + TRIVY IMAGE SCAN + PUSH
 # -------------------------------------------------------
   docker:
     runs-on: ubuntu-latest
@@ -132,21 +132,35 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
 
-      - name: Build and Push Docker Image
-        uses: docker/build-push-action@v6
-        with:
-          context: src/product-catalog
-          file: src/product-catalog/Dockerfile
-          push: true
-          tags: |
-            ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+      # -----------------------------------------------
+      # BUILD IMAGE LOCALLY FIRST
+      # -----------------------------------------------
+      - name: Build Docker Image
+        run: |
+          docker build \
+            -t ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} \
+            -f src/product-catalog/Dockerfile \
+            src/product-catalog
 
+      # -----------------------------------------------
+      # SCAN IMAGE BEFORE PUSHING
+      # -----------------------------------------------
       - name: Scan Docker Image with Trivy
         run: |
           docker run --rm \
             -v /var/run/docker.sock:/var/run/docker.sock \
             aquasec/trivy:latest image \
+            --severity CRITICAL,HIGH \
+            --exit-code 1 \
+            --ignore-unfixed \
             ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+
+      # -----------------------------------------------
+      # PUSH IMAGE ONLY IF SCAN PASSES
+      # -----------------------------------------------
+      - name: Push Docker Image
+        run: |
+          docker push ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
 
 # -------------------------------------------------------
 # GITOPS MANIFEST UPDATE
