@@ -187,6 +187,10 @@ jobs:
           git config --global user.email "github-actions@github.com"
 
           git add kubernetes/productcatalog/deploy.yaml
+          git fetch origin
+          git checkout main
+          git pull origin main
+          git add .
 
           git commit -m "Update product-catalog image to ${IMAGE_TAG}" || echo "No changes to commit"
 
