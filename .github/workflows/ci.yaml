@@ -21,7 +21,7 @@ env:
   GO_VERSION: "1.22"
 
   IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}
-  IMAGE_TAG: ${{ github.sha }}
+  IMAGE_TAG: ""
 
   GITHUB_USER_EMAIL: ${{ secrets.DOCKER_USER_EMAIL }}
   GITHUB_USER_NAME: ${{ secrets.DOCKER_USERNAME }}
@@ -157,6 +157,9 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
+      - name: Set Short Git SHA
+        run: echo "IMAGE_TAG=${GITHUB_SHA::10}" >> $GITHUB_ENV
+
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -183,7 +186,7 @@ jobs:
       # SCAN IMAGE BEFORE PUSH
       # -----------------------------------------------
       - name: Scan Docker Image with Trivy
-        uses:  aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
         with:
           image-ref: ${{ env.IMAGE_NAME }}/product-catalog:${{ env.IMAGE_TAG }}
           format: sarif
@@ -226,6 +229,9 @@ jobs:
           token: ${{ env.GITHUB_TOKEN }}
           ref: main
           fetch-depth: 0
+
+      - name: Set Short Git SHA
+        run: echo "IMAGE_TAG=${GITHUB_SHA::10}" >> $GITHUB_ENV
 
       - name: Update Kubernetes Manifest Image
         run: |
