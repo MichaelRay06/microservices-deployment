@@ -183,7 +183,7 @@ jobs:
       # SCAN IMAGE BEFORE PUSH
       # -----------------------------------------------
       - name: Scan Docker Image with Trivy
-        uses: aquasecurity/trivy-action@0.36.0
+        uses:  aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
         with:
           image-ref: ${{ env.IMAGE_NAME }}/product-catalog:${{ env.IMAGE_TAG }}
           format: sarif
