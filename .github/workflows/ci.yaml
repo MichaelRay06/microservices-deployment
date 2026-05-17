@@ -3,14 +3,31 @@ name: product-catalog-ci
 on:
   push:
     branches:
-      - "main"
+      - main
     paths-ignore:
       - "kubernetes/**"
 
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - "kubernetes/**"
+
+permissions:
+  contents: write
+  security-events: write
+
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/product-catalog
-  IMAGE_TAG: ${{ github.run_id }}
+  GO_VERSION: "1.22"
+
+  IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}
+  IMAGE_TAG: ${{ github.sha }}
+
+  GITHUB_USER_EMAIL: ${{ secrets.DOCKER_USER_EMAIL }}
+  GITHUB_USER_NAME: ${{ secrets.DOCKER_USERNAME }}
+
+  DOCKERHUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN }}
+  GITHUB_TOKEN: ${{ secrets.CICD_GITHUB_TOKEN }}
 
 jobs:
 
@@ -27,7 +44,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.22"
+          go-version: ${{ env.GO_VERSION }}
           cache: true
 
       - name: Verify Go Version
@@ -45,7 +62,14 @@ jobs:
 
       - name: Run Tests
         working-directory: src/product-catalog
-        run: go test ./... -v
+        run: |
+          go test ./... -v -race -coverprofile=coverage.out
+
+      - name: Upload Test Coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: src/product-catalog/coverage.out
 
 # -------------------------------------------------------
 # GOLANGCI-LINT
@@ -62,7 +86,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.22"
+          go-version: ${{ env.GO_VERSION }}
           cache: true
 
       - name: Run GolangCI-Lint
@@ -83,12 +107,13 @@ jobs:
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Run Gitleaks
         uses: gitleaks/gitleaks-action@v2
-        with:
-          source: .
-          args: detect --source src/product-catalog --verbose --redact
+        env:
+          GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
 
 # -------------------------------------------------------
 # TRIVY FILESYSTEM SCAN
@@ -104,13 +129,21 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run Trivy Filesystem Scan
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@0.36.0
         with:
           scan-type: fs
           scan-ref: src/product-catalog
           vuln-type: os,library
           severity: CRITICAL,HIGH
           ignore-unfixed: true
+          format: sarif
+          output: trivy-fs-results.sarif
+
+      - name: Upload Trivy Scan Results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-fs-results.sarif
 
 # -------------------------------------------------------
 # DOCKER BUILD + TRIVY IMAGE SCAN + PUSH
@@ -118,6 +151,7 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     needs: trivy_fs
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
       - name: Checkout Source Code
@@ -129,31 +163,52 @@ jobs:
       - name: Login to DockerHub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+          username: ${{ env.GITHUB_USER_NAME }}
+          password: ${{ env.DOCKERHUB_TOKEN }}
 
       # -----------------------------------------------
-      # BUILD IMAGE LOCALLY FIRST
+      # BUILD IMAGE LOCALLY
       # -----------------------------------------------
       - name: Build Docker Image
-        run: |
-          docker build \
-            -t ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} \
-            -f src/product-catalog/Dockerfile \
-            src/product-catalog
+        uses: docker/build-push-action@v6
+        with:
+          context: src/product-catalog
+          file: src/product-catalog/Dockerfile
+          tags: ${{ env.IMAGE_NAME }}/product-catalog:${{ env.IMAGE_TAG }}
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       # -----------------------------------------------
-      # SCAN IMAGE BEFORE PUSHING
+      # SCAN IMAGE BEFORE PUSH
       # -----------------------------------------------
       - name: Scan Docker Image with Trivy
-        run:  docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:latest image ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+        uses: aquasecurity/trivy-action@0.36.0
+        with:
+          image-ref: ${{ env.IMAGE_NAME }}/product-catalog:${{ env.IMAGE_TAG }}
+          format: sarif
+          output: trivy-image-results.sarif
+
+      - name: Upload Trivy Image Scan Results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-image-results.sarif
 
       # -----------------------------------------------
-      # PUSH IMAGE ONLY IF SCAN PASSES
+      # PUSH IMAGE
       # -----------------------------------------------
       - name: Push Docker Image
-        run: |
-          docker push ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+        uses: docker/build-push-action@v6
+        with:
+          context: src/product-catalog
+          file: src/product-catalog/Dockerfile
+          tags: |
+            ${{ env.IMAGE_NAME }}/product-catalog:${{ env.IMAGE_TAG }}
+            ${{ env.IMAGE_NAME }}/product-catalog:latest
+          push: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
 # -------------------------------------------------------
 # GITOPS MANIFEST UPDATE
@@ -161,37 +216,39 @@ jobs:
   update-manifest:
     runs-on: ubuntu-latest
     needs: docker
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
       - name: Checkout GitOps Repository
         uses: actions/checkout@v4
         with:
           repository: MichaelRay06/microservices-deployment
-          token: ${{ secrets.CICD_GITHUB_TOKEN }}
+          token: ${{ env.GITHUB_TOKEN }}
+          ref: main
+          fetch-depth: 0
 
       - name: Update Kubernetes Manifest Image
         run: |
-          IMAGE_TAG=${{ github.run_id }}
-
           echo "Before update:"
           cat kubernetes/productcatalog/deploy.yaml
 
-          sed -i "s|image: michaeltayo/product-catalog:.*|image: michaeltayo/product-catalog:${IMAGE_TAG}|g" kubernetes/productcatalog/deploy.yaml
+          sed -i "s|image: .*product-catalog:.*|image: ${IMAGE_NAME}/product-catalog:${IMAGE_TAG}|g" kubernetes/productcatalog/deploy.yaml
 
           echo "After update:"
           cat kubernetes/productcatalog/deploy.yaml
 
       - name: Commit and Push Changes
         run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "github-actions@github.com"
+          git config --global user.name "${GITHUB_USER_NAME}"
+          git config --global user.email "${GITHUB_USER_EMAIL}"
+
+          if git diff --quiet kubernetes/productcatalog/deploy.yaml; then
+            echo "No changes to commit"
+            exit 0
+          fi
 
           git add kubernetes/productcatalog/deploy.yaml
-          git fetch origin
-          git checkout main
-          git pull origin main
-          git add .
 
-          git commit -m "Update product-catalog image to ${IMAGE_TAG}" || echo "No changes to commit"
+          git commit -m "Update product-catalog image to ${IMAGE_TAG}"
 
           git push origin main
