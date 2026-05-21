@@ -233,10 +233,7 @@ jobs:
 
       - name: Login to ArgoCD
         run: |
-          argocd login 172.26.224.206:30007 \
-            --username admin \
-            --password ${{env.ARGOCD_PASSWORD}} \
-            --insecure
+          argocd login ${{ env.ARGOCD_SERVER }}   --username ${{ env.ARGOCD_USERNAME }}  --password ${{env.ARGOCD_PASSWORD}} --insecure
 
       - name: Set Short Git SHA
         run: |
