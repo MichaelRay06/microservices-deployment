@@ -269,9 +269,9 @@ jobs:
           argocd app create microservices-deployment-demo \
             --repo https://github.com/MichaelRay06/microservices-deployment.git \
             --path kubernetes/productcatalog \
-            --revision HEAD \
+            --revision main \
             --dest-server https://kubernetes.default.svc \
-            --dest-namespace abisheck-deployment \
+            --dest-namespace argocd \
             --sync-policy automated \
             --auto-prune \
             --self-heal \
