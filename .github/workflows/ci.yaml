@@ -155,6 +155,7 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     needs: trivy_fs
+
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
@@ -210,10 +211,10 @@ jobs:
   update-manifest:
     runs-on: ubuntu-latest
     needs: docker
+
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
-
       - name: Checkout GitOps Repository
         uses: actions/checkout@v4
         with:
@@ -232,9 +233,9 @@ jobs:
 
       - name: Login to ArgoCD
         run: |
-          argocd login ${{ env.ARGOCD_SERVER }} \
-            --username ${{ env.ARGOCD_USERNAME }} \
-            --password ${{ env.ARGOCD_PASSWORD }} \
+          argocd login 172.26.224.206:30007 \
+            --username admin \
+            --password ${{env.ARGOCD_PASSWORD}} \
             --insecure
 
       - name: Set Short Git SHA
@@ -282,7 +283,4 @@ jobs:
       # -------------------------------------------------------
       - name: Sync ArgoCD Application
         run: |
-          argocd app sync microservices-deployment-demo 
-
-
-          #####
+          argocd app sync microservices-deployment-demo
