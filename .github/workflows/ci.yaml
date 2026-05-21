@@ -231,9 +231,9 @@ jobs:
           chmod +x argocd
           sudo mv argocd /usr/local/bin/argocd
 
-      #- name: Login to ArgoCD
-       # run: |
-       #   argocd login ${{ env.ARGOCD_SERVER }}   --username ${{ env.ARGOCD_USERNAME }}  --password ${{env.ARGOCD_PASSWORD}} --insecure
+      # - name: Login to ArgoCD
+      #  run: |
+      #    argocd login ${{ env.ARGOCD_SERVER }}   --username ${{ env.ARGOCD_USERNAME }}  --password ${{env.ARGOCD_PASSWORD}} --insecure
 
       - name: Set Short Git SHA
         run: |
@@ -261,23 +261,23 @@ jobs:
       # -------------------------------------------------------
       # CREATE OR UPDATE ARGOCD APPLICATION
       # -------------------------------------------------------
-      - name: Create or Update ArgoCD Application
-        run: |
-          argocd app create microservices-deployment-demo \
-            --repo https://github.com/MichaelRay06/microservices-deployment.git \
-            --path kubernetes/productcatalog \
-            --revision main \
-            --dest-server https://kubernetes.default.svc \
-            --dest-namespace argocd \
-            --sync-policy automated \
-            --auto-prune \
-            --self-heal \
-            --sync-option CreateNamespace=true \
-            --upsert
+      # - name: Create or Update ArgoCD Application
+      #   run: |
+      #     argocd app create microservices-deployment-demo \
+      #       --repo https://github.com/MichaelRay06/microservices-deployment.git \
+      #       --path kubernetes/productcatalog \
+      #       --revision main \
+      #       --dest-server https://kubernetes.default.svc \
+      #       --dest-namespace argocd \
+      #       --sync-policy automated \
+      #       --auto-prune \
+      #       --self-heal \
+      #       --sync-option CreateNamespace=true \
+      #       --upsert
 
-      # -------------------------------------------------------
-      # SYNC APPLICATION
-      # -------------------------------------------------------
-      - name: Sync ArgoCD Application
-        run: |
-          argocd app sync microservices-deployment-demo
+      # # -------------------------------------------------------
+      # # SYNC APPLICATION
+      # # -------------------------------------------------------
+      # - name: Sync ArgoCD Application
+      #   run: |
+      #     argocd app sync microservices-deployment-demo
