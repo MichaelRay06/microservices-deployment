@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: microservices-deployment-demo
+  namespace: argocd
+
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/MichaelRay06/microservices-deployment.git
+    targetRevision: HEAD
+    path: kubernetes/productcatalog
+
+    #directory:
+     #recurse: true
+     #include: "{frontendproxy/**,productcatalog/**,frontend/**}"
+     #include: "{productcatalog/**}"
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+
+  syncPolicy:
+    automated:
+       prune: true
+      # selfHeal: true
+
+    syncOptions:
+      - CreateNamespace=true
