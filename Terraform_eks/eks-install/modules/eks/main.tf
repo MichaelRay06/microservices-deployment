@@ -1,4 +1,4 @@
-resource "aws_iam_role" "cluster" {
+resource "aws_iam_role" "telement-cluster" {
   name = "${var.cluster_name}-cluster-role"
 
   assume_role_policy = jsonencode({
@@ -15,13 +15,13 @@ resource "aws_iam_role" "cluster" {
 
 resource "aws_iam_role_policy_attachment" "cluster_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
-  role       = aws_iam_role.cluster.name
+  role       = aws_iam_role.telement-cluster.name
 }
 
 resource "aws_eks_cluster" "main" {
   name     = var.cluster_name
   version  = var.cluster_version
-  role_arn = aws_iam_role.cluster.arn
+  role_arn = aws_iam_role.telement-cluster.arn
 
   vpc_config {
     subnet_ids = var.subnet_ids
@@ -32,7 +32,7 @@ resource "aws_eks_cluster" "main" {
   ]
 }
 
-resource "aws_iam_role" "node" {
+resource "aws_iam_role" "telement-node" {
   name = "${var.cluster_name}-node-role"
 
   assume_role_policy = jsonencode({
@@ -55,7 +55,7 @@ resource "aws_iam_role_policy_attachment" "node_policy" {
   ])
 
   policy_arn = each.value
-  role       = aws_iam_role.node.name
+  role       = aws_iam_role.telement-node.name
 }
 
 resource "aws_eks_node_group" "main" {
@@ -63,7 +63,7 @@ resource "aws_eks_node_group" "main" {
 
   cluster_name    = aws_eks_cluster.main.name
   node_group_name = each.key
-  node_role_arn   = aws_iam_role.node.arn
+  node_role_arn   = aws_iam_role.telement-node.arn
   subnet_ids      = var.subnet_ids
 
   instance_types = each.value.instance_types

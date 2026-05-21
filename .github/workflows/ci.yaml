@@ -19,21 +19,20 @@ permissions:
 
 env:
   GO_VERSION: "1.22"
-
   IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}
   IMAGE_TAG: ""
-
   GITHUB_USER_EMAIL: ${{ secrets.DOCKER_USER_EMAIL }}
   GITHUB_USER_NAME: ${{ secrets.DOCKER_USERNAME }}
-
   DOCKERHUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN }}
   GITHUB_TOKEN: ${{ secrets.CICD_GITHUB_TOKEN }}
+  ARGOCD_SERVER: ${{ secrets.ARGOCD_SERVER }}
+  ARGOCD_USERNAME: ${{ secrets.ARGOCD_USERNAME }}
+  ARGOCD_PASSWORD: ${{ secrets.ARGOCD_PASSWORD }}
 
 jobs:
-
-# -------------------------------------------------------
-# BUILD + TEST
-# -------------------------------------------------------
+  # -------------------------------------------------------
+  # BUILD + TEST
+  # -------------------------------------------------------
   build:
     runs-on: ubuntu-latest
 
@@ -71,9 +70,9 @@ jobs:
           name: coverage-report
           path: src/product-catalog/coverage.out
 
-# -------------------------------------------------------
-# GOLANGCI-LINT
-# -------------------------------------------------------
+  # -------------------------------------------------------
+  # GOLANGCI-LINT
+  # -------------------------------------------------------
   golangci_lint:
     runs-on: ubuntu-latest
     needs: build
@@ -96,9 +95,9 @@ jobs:
           working-directory: src/product-catalog
           args: --timeout=5m
 
-# -------------------------------------------------------
-# GITLEAKS
-# -------------------------------------------------------
+  # -------------------------------------------------------
+  # GITLEAKS
+  # -------------------------------------------------------
   gitleaks:
     runs-on: ubuntu-latest
     needs: build
@@ -115,9 +114,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
 
-# -------------------------------------------------------
-# TRIVY FILESYSTEM SCAN
-# -------------------------------------------------------
+  # -------------------------------------------------------
+  # TRIVY FILESYSTEM SCAN
+  # -------------------------------------------------------
   trivy_fs:
     runs-on: ubuntu-latest
     needs:
@@ -145,9 +144,9 @@ jobs:
         with:
           sarif_file: trivy-fs-results.sarif
 
-# -------------------------------------------------------
-# DOCKER BUILD + TRIVY IMAGE SCAN + PUSH
-# -------------------------------------------------------
+  # -------------------------------------------------------
+  # DOCKER BUILD + TRIVY IMAGE SCAN + PUSH
+  # -------------------------------------------------------
   docker:
     runs-on: ubuntu-latest
     needs: trivy_fs
@@ -213,9 +212,9 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-# -------------------------------------------------------
-# GITOPS MANIFEST UPDATE
-# -------------------------------------------------------
+  # -------------------------------------------------------
+  # GITOPS MANIFEST UPDATE
+  # -------------------------------------------------------
   update-manifest:
     runs-on: ubuntu-latest
     needs: docker
@@ -229,6 +228,25 @@ jobs:
           token: ${{ env.GITHUB_TOKEN }}
           ref: main
           fetch-depth: 0
+
+      - name: Install kubectl
+        run: |
+          curl -O https://s3.us-west-2.amazonaws.com/amazon-eks/1.30.7/2024-12-12/bin/linux/amd64/kubectl
+          chmod +x ./kubectl
+          sudo mv ./kubectl /usr/local/bin/kubectl
+
+      - name: Install ArgoCD CLI
+        run: |
+          curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+          chmod +x argocd
+          sudo mv argocd /usr/local/bin/argocd
+
+      - name: Login to ArgoCD
+        run: |
+          argocd login ${{ secrets.ARGOCD_SERVER }} \
+            --username ${{ secrets.ARGOCD_USERNAME }} \
+            --password ${{ secrets.ARGOCD_PASSWORD }} \
+            --insecure
 
       - name: Set Short Git SHA
         run: echo "IMAGE_TAG=${GITHUB_SHA::10}" >> $GITHUB_ENV
@@ -254,7 +272,5 @@ jobs:
           fi
 
           git add kubernetes/productcatalog/deploy.yaml
-
           git commit -m "Update product-catalog image to ${IMAGE_TAG}"
-
           git push origin main

@@ -7,7 +7,7 @@ terraform {
   }
 
   backend "s3" {
-    bucket       = "terraform-eks-telement-miroservices-state-s3-bucket"
+    bucket       = "telement-state-s3-bucket"
     key          = "terraform.tfstate"
     region       = "eu-west-2"
     use_lockfile = true
