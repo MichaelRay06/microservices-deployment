@@ -233,7 +233,7 @@ jobs:
 
       - name: Login to ArgoCD
         run: |
-          argocd login localhost:8080 \
+          argocd login 172.26.224.206:8080 \
             --username admin \
             --password ${{ env.ARGOCD_PASSWORD }} \
             --insecure
