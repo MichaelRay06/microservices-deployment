@@ -241,12 +241,12 @@ jobs:
           chmod +x argocd
           sudo mv argocd /usr/local/bin/argocd
 
-      # - name: Login to ArgoCD
-      #   run: |
-      #     argocd login ${{ secrets.ARGOCD_SERVER }} \
-      #       --username ${{ secrets.ARGOCD_USERNAME }} \
-      #       --password ${{ secrets.ARGOCD_PASSWORD }} \
-      #       --insecure
+      - name: Login to ArgoCD
+        run: |
+          argocd login ${{ env.ARGOCD_SERVER }} \
+            --username ${{ env.ARGOCD_USERNAME }} \
+            --password ${{ env.ARGOCD_PASSWORD }} \
+            --insecure
 
       - name: Set Short Git SHA
         run: echo "IMAGE_TAG=${GITHUB_SHA::10}" >> $GITHUB_ENV
