@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: https://github.com/MichaelRay06/microservices-deployment.git
     targetRevision: HEAD
-    path: kubernetes/productcatalog
+    path: kubernetes/productcatalog/**
 
     #directory:
      #recurse: true
@@ -19,12 +19,12 @@ spec:
 
   destination:
     server: https://kubernetes.default.svc
-    namespace: default
+    namespace: abisheck-deployment
 
   syncPolicy:
     automated:
        prune: true
-      # selfHeal: true
+       selfHeal: true
 
     syncOptions:
       - CreateNamespace=true
